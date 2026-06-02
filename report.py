@@ -1,8 +1,9 @@
-"""Console reporting / CLI entry point for the Layer 2 ML forecasting package.
+"""Full-stack CLI pipeline for the hybrid crypto model (Layers 0–3).
 
-Holds the dependency-free table formatters and the :func:`main` pipeline that
-runs ``CryptoMLPredictor`` end to end and prints a readable report. Kept
-separate from the model logic so the library stays presentation-free.
+Runs data ingestion, statistical analysis (ADF + GARCH plots), ML forecasting,
+financial backtesting, Monte Carlo risk simulation (with plots), and optional
+model persistence. Console tables plus matplotlib figures are produced so the
+project demonstrates every implemented layer in one command.
 """
 
 from __future__ import annotations
@@ -10,12 +11,106 @@ from __future__ import annotations
 import warnings
 from typing import Any
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from mlbase import DEFAULT_TICKERS
 from model import CryptoMLPredictor
 from risk_management import CryptoMonteCarloSimulator, SimulationResult, suggest_allocation
+from statistical_analysis import CryptoVolatilityModel
+
+
+def _ticker_slug(ticker: str) -> str:
+    """Return a filesystem-safe ticker symbol for plot filenames."""
+    return ticker.replace("-", "_")
+
+
+def _run_data_layer(predictor: CryptoMLPredictor) -> None:
+    """Summarise Layer 0: downloaded market data and engineered series."""
+    print("\n" + "=" * 72)
+    print("Layer 0 — Data (CryptoDataFetcher)")
+    print("=" * 72)
+    print(f"  Tickers   : {', '.join(predictor.tickers)}")
+    print(f"  Interval  : {predictor.interval}")
+    print(f"  Range     : {predictor.start} → {predictor.end}")
+    print(f"  Cache     : {predictor.cache_dir or 'disabled'}")
+
+    if predictor.log_returns is None or predictor.close_prices is None:
+        print("  Status    : data not loaded.")
+        return
+
+    n_rows = len(predictor.log_returns)
+    idx = predictor.log_returns.index
+    print(f"  Rows      : {n_rows} aligned observations")
+    print(f"  Dates     : {idx.min()} → {idx.max()}")
+    print(
+        f"  Last close: "
+        + ", ".join(
+            f"{t}={predictor.close_prices[t].dropna().iloc[-1]:,.2f}"
+            for t in predictor.tickers
+            if t in predictor.close_prices.columns
+        )
+    )
+
+
+def _run_statistical_layer(
+    predictor: CryptoMLPredictor,
+    *,
+    show_plots: bool = True,
+    save_plots: bool = True,
+) -> None:
+    """Run Layer 1: ADF stationarity checks and GARCH volatility charts."""
+    print("\n" + "=" * 72)
+    print("Layer 1 — Statistical Analysis (ADF + GARCH)")
+    print("=" * 72)
+
+    if predictor.log_returns is None:
+        warnings.warn(
+            "Log returns unavailable; skipping Layer 1.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return
+
+    vol_model = CryptoVolatilityModel(
+        predictor.log_returns,
+        trading_days=predictor.periods_per_year,
+    )
+
+    for ticker in predictor.tickers:
+        if ticker not in predictor.log_returns.columns:
+            continue
+
+        print(f"\n--- {ticker} ---")
+        try:
+            vol_model.check_stationarity(predictor.log_returns[ticker])
+            garch_result = vol_model.fit_garch(
+                predictor.log_returns[ticker], ticker=ticker
+            )
+            status = "converged" if garch_result.converged else "NOT converged"
+            print(f"  GARCH(1,1) fit: {status}")
+            latest_vol = garch_result.annualized_volatility.dropna().iloc[-1]
+            print(f"  Latest annualised conditional vol: {latest_vol:.2%}")
+
+            savepath = (
+                f"garch_{_ticker_slug(ticker)}.png" if save_plots else None
+            )
+            fig = vol_model.plot_volatility(
+                ticker,
+                show=show_plots,
+                savepath=savepath,
+            )
+            if not show_plots:
+                plt.close(fig)
+            if savepath:
+                print(f"  Saved chart: {savepath}")
+        except Exception as exc:  # pragma: no cover - plotting is best-effort
+            warnings.warn(
+                f"Layer 1 failed for {ticker} ({exc!r}); continuing.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
 
 def _format_metrics(metrics: pd.DataFrame) -> str:
@@ -127,6 +222,9 @@ def _run_risk_layer(
     predictor: CryptoMLPredictor,
     horizon_days: int = 30,
     num_simulations: int = 10_000,
+    *,
+    show_plots: bool = False,
+    save_plots: bool = True,
 ) -> None:
     """Drive the Layer 3 Monte Carlo risk engine from live model outputs.
 
@@ -176,6 +274,28 @@ def _run_risk_layer(
             f"  Inputs: daily mu={mu:+.5f}, annual sigma={sigma:.2%}"
         )
 
+        plot_path = (
+            f"montecarlo_{_ticker_slug(ticker)}.png" if save_plots else None
+        )
+        try:
+            fig = simulator.plot_simulation(
+                result,
+                metrics=metrics,
+                show=show_plots,
+                savepath=plot_path,
+            )
+            if not show_plots:
+                plt.close(fig)
+            if plot_path:
+                print(f"  Saved chart: {plot_path}")
+        except Exception as exc:  # pragma: no cover - plotting is best-effort
+            warnings.warn(
+                f"Monte Carlo plot failed for {ticker} ({exc!r}); "
+                "metrics report unaffected.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+
     if len(results) >= 2:
         print("\nSuggested allocation from simulated outcomes:")
         for method in ("sharpe", "kelly"):
@@ -184,8 +304,24 @@ def _run_risk_layer(
             print(f"  {method.capitalize():7s}: {split}")
 
 
-def main() -> None:
-    """Run the full Layer 2 ML forecasting pipeline."""
+def main(*, show_plots: bool = False) -> None:
+    """Run the complete hybrid model pipeline (Layers 0–3) with visualisations.
+
+    Parameters
+    ----------
+    show_plots:
+        When ``True``, open blocking matplotlib windows after each chart.
+        Default is ``False``: charts are saved to PNG only so the full
+        console report runs without waiting for window closes.
+    """
+    print("=" * 72)
+    print("Crypto Hybrid Model — Full Pipeline")
+    print("=" * 72)
+    if show_plots:
+        print("(Interactive charts enabled — close each window to continue.)")
+    else:
+        print("(Charts saved to PNG; use --show-plots to open interactive windows.)")
+
     predictor = CryptoMLPredictor(
         tickers=DEFAULT_TICKERS,
         start="2020-01-01",
@@ -196,9 +332,17 @@ def main() -> None:
     )
     predictor.train_all()
 
+    _run_data_layer(predictor)
+    _run_statistical_layer(
+        predictor, show_plots=show_plots, save_plots=True
+    )
+
+    print("\n" + "=" * 72)
+    print("Layer 2 — Machine Learning (XGBoost / TimeSeriesSplit)")
     print("=" * 72)
-    print("Layer 2 ML Forecasting Metrics")
-    print("=" * 72)
+    print()
+    print("ML Forecasting Metrics")
+    print("-" * 72)
     print(_format_metrics(predictor.metrics_table()))
     print()
 
@@ -258,7 +402,13 @@ def main() -> None:
         mu = predictor.predict_next_day_return(ticker)
         print(f"{ticker}: {mu:.6f}")
 
-    _run_risk_layer(predictor)
+    _run_risk_layer(predictor, show_plots=show_plots, save_plots=True)
+
+    print("\n" + "=" * 72)
+    print("Pipeline complete")
+    print("=" * 72)
+    print("  Charts: garch_BTC_USD.png, garch_ETH_USD.png,")
+    print("          montecarlo_BTC_USD.png, montecarlo_ETH_USD.png")
 
     try:
         predictor.save_models("models_artifacts")
@@ -294,4 +444,13 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Crypto hybrid model full pipeline")
+    parser.add_argument(
+        "--show-plots",
+        action="store_true",
+        help="Open matplotlib windows (blocks until each chart is closed).",
+    )
+    args = parser.parse_args()
+    main(show_plots=args.show_plots)

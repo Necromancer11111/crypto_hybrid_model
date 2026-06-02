@@ -90,8 +90,12 @@ pip install -r requirements.txt
 ### 3. Uruchom rurociąg (pipeline)
 
 ```powershell
-# Z głównego folderu projektu:
+# Z głównego folderu projektu (pełny raport + zapis wykresów PNG, bez blokowania):
 python main.py
+
+# Opcjonalnie: okna matplotlib (trzeba zamykać każdy wykres, żeby iść dalej):
+python main.py --show-plots
+
 # lub używając oryginalnego punktu wejścia:
 python ml_forecasting.py
 ```
@@ -107,7 +111,14 @@ python risk_management.py
 
 ## Raport i Wyjście (Output)
 
-Standardowe uruchomienie `main.py` generuje w konsoli 8 sekcji:
+Standardowe uruchomienie `main.py` uruchamia **cały pipeline** (konsola + wykresy):
+
+0. **Warstwa 0 — Dane** — tickery, zakres dat, cache, ostatnie ceny  
+1. **Warstwa 1 — Statystyka** — ADF, status GARCH, wykresy `garch_*.png`  
+2. **Warstwa 2 — ML** — metryki, feature importances, backtest, walk-forward  
+3. **Warstwa 3 — Ryzyko** — Monte Carlo, VaR/CVaR, wykresy `montecarlo_*.png`
+
+Szczegółowe sekcje tekstowe (ML i finanse):
 
 1. **Layer 2 ML Forecasting Metrics** — metryki MAE i R² (dla każdego foldu i uśrednione)
 2. **Feature Importances** — waga i wpływ cech na decyzyjność modelu XGBoost

@@ -358,7 +358,10 @@ class CryptoVolatilityModel:
     # ------------------------------------------------------------------
 
     def plot_volatility(
-        self, ticker: str, show: bool = True
+        self,
+        ticker: str,
+        show: bool = True,
+        savepath: str | None = None,
     ) -> plt.Figure:
         """Render a two-panel chart for ``ticker``.
 
@@ -371,6 +374,8 @@ class CryptoVolatilityModel:
             Column name to plot. GARCH is fitted on demand if needed.
         show:
             If ``True``, call ``plt.show()`` before returning.
+        savepath:
+            Optional path to save the figure as an image (e.g. PNG).
 
         Returns
         -------
@@ -454,6 +459,8 @@ class CryptoVolatilityModel:
             )
             fig.tight_layout(rect=(0, 0, 1, 0.97))
 
+        if savepath is not None:
+            fig.savefig(savepath, dpi=120, bbox_inches="tight")
         if show:
             plt.show()
         return fig
