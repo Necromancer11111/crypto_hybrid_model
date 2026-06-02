@@ -4,6 +4,8 @@
 **Odbiorca:** wykładowca, rekruter, jury projektu lub zespół techniczny  
 **Demonstracja na żywo:** `python main.py` (wymaga internetu przy pierwszym uruchomieniu lub cache w `data_cache/`)
 
+> **Wzory matematyczne:** używamy składni LaTeX zgodnej z GitHubem — bloki `$$ ... $$`, w tekście `$ ... $`. Na [github.com](https://github.com) renderują się automatycznie; w Cursorze włącz podgląd Markdown z obsługą matematyki (np. rozszerzenie *Markdown Math*).
+
 ---
 
 ## Spis treści
@@ -78,9 +80,9 @@ yfinance → log-zwroty → [ADF + GARCH σ] → cechy + target → XGBoost → 
 
 **Wzór:**
 
-\[
+$$
 r_t = \ln\left(\frac{P_t}{P_{t-1}}\right)
-\]
+$$
 
 **Co powiedzieć:**
 
@@ -100,15 +102,15 @@ r_t = \ln\left(\frac{P_t}{P_{t-1}}\right)
 
 **Wzór (warunkowa wariancja):**
 
-\[
+$$
 \sigma_t^2 = \omega + \alpha \varepsilon_{t-1}^2 + \beta \sigma_{t-1}^2
-\]
+$$
 
 **Annualizacja (krypto 24/7):**
 
-\[
-\sigma_{\text{roczna}} = \sigma_{\text{dzienną}} \times \sqrt{365}
-\]
+$$
+\sigma_{\mathrm{roczna}} = \sigma_{\mathrm{dziennie}} \times \sqrt{365}
+$$
 
 **Co powiedzieć:**
 
@@ -193,16 +195,16 @@ frame[TARGET_COLUMN] = returns.shift(-1)  # features.py
 
 **Wzór dyskretny (dzienny krok):**
 
-\[
+$$
 S_t = S_0 \exp\left[\left(\mu - \frac{\sigma^2}{2}\right)\Delta t + \sigma\sqrt{\Delta t}\, Z\right], \quad \Delta t = \frac{1}{365}
-\]
+$$
 
 | Symbol | Źródło w projekcie |
 |--------|-------------------|
-| \(S_0\) | Ostatnia cena zamknięcia |
-| \(\mu\) | Roczny dryf z prognozy ML (dzienny log-zwrot × 365) |
-| \(\sigma\) | Roczna zmienność GARCH |
-| \(Z\) | Losowa zmienna standardowa (10 000 ścieżek) |
+| $S_0$ | Ostatnia cena zamknięcia |
+| $\mu$ | Roczny dryf z prognozy ML (dzienny log-zwrot $\times$ 365) |
+| $\sigma$ | Roczna zmienność GARCH |
+| $Z$ | Losowa zmienna standardowa (10 000 ścieżek) |
 
 **Co powiedzieć:**
 
@@ -387,7 +389,7 @@ simulator = CryptoMonteCarloSimulator(price, mu, sigma, ticker=ticker)
 | BTC-USD | ~−0.30 | ~49.5% | *(wpisz z konsoli)* | *(wpisz)* | DEFENSYWNA PRZEWAGA |
 | ETH-USD | ~−0.17 | ~48.6% | *(wpisz)* | *(wpisz)* | PEŁNA PRZEWAGA* |
 
-\* ETH: pełna przewaga często wynika z ujemnego benchmarku w oknie testowym.
+* ETH: pełna przewaga często wynika z ujemnego benchmarku w oknie testowym.
 
 ---
 
