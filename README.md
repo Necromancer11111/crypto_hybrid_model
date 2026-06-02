@@ -33,6 +33,12 @@ Layer 2 — Machine Learning
 
   ml_forecasting.py     Thin facade – keeps the original entry point and
                         all existing imports working unchanged
+
+Layer 3 — Risk Management & Market Simulation
+  risk_management.py    CryptoMonteCarloSimulator
+                        Vectorised Geometric Brownian Motion (GBM) paths
+                        driven by ML drift (mu) and GARCH volatility (sigma)
+                        VaR / CVaR (95% & 99%), Sharpe/Kelly allocation, plots
 ```
 
 ---
@@ -51,6 +57,9 @@ Layer 2 — Machine Learning
 | **Metrics** | MAE, R², directional accuracy, Sharpe, Sortino, max drawdown, VaR, CVaR, win rate, cumulative return |
 | **Verdict** | Rule-based classification: PELNA PRZEWAGA / DEFENSYWNA PRZEWAGA / BRAK PRZEWAGI |
 | **Persistence** | joblib model files + metadata.json sidecar |
+| **Simulation** | Vectorised GBM Monte Carlo (10k paths) fed by live ML drift + GARCH volatility |
+| **Tail risk** | 95% / 99% VaR and Expected Shortfall (CVaR) from the terminal distribution |
+| **Allocation** | Sharpe- or Kelly-based BTC/ETH split with risk-parity fallback |
 
 ---
 
@@ -89,7 +98,7 @@ The first run downloads data from yfinance and writes a local cache to
 
 ## Output
 
-Running `main.py` produces a console report with six sections:
+Running `main.py` produces a console report with eight sections:
 
 1. **Layer 2 ML Forecasting Metrics** — MAE and R² per fold and on average
 2. **Feature Importances** — ranked feature contributions per ticker
@@ -97,6 +106,11 @@ Running `main.py` produces a console report with six sections:
 4. **Investment Verdict** — rule-based assessment with caveats
 5. **Calibrated Threshold** — Sortino-optimal threshold (optimistic upper bound)
 6. **Walk-Forward Validation** — leakage-free strategy vs benchmark per window
+7. **Next-Day Forecasts** — expected log return per ticker
+8. **Monte Carlo Risk Simulation** — VaR/CVaR and Sharpe/Kelly allocation (Layer 3)
+
+`risk_management.py` can also be run standalone (`python risk_management.py`)
+with mocked inputs, which additionally saves price-path / distribution plots.
 
 ---
 
@@ -108,9 +122,11 @@ Running `main.py` produces a console report with six sections:
 | `statistical_analysis.py` | `CryptoVolatilityModel(returns, trading_days)` |
 | `model.py` | `CryptoMLPredictor(tickers, start, end, ..., cache_dir)` |
 | `finance_metrics.py` | `summarize`, `sharpe_ratio`, `sortino_ratio`, `max_drawdown`, `walk_forward_threshold`, … |
+| `risk_management.py` | `CryptoMonteCarloSimulator(current_price, expected_return, volatility)`, `suggest_allocation` |
 
 ```python
 from model import CryptoMLPredictor
+from risk_management import CryptoMonteCarloSimulator
 
 predictor = CryptoMLPredictor(cache_dir="data_cache")
 predictor.train_all()
@@ -121,6 +137,13 @@ btc_mu = predictor.predict_next_day_return("BTC-USD")
 # Walk-forward validated backtest
 result = predictor.walk_forward_threshold("BTC-USD")
 print(result["verdict"])
+
+# Layer 3: Monte Carlo risk simulation fed by live ML + GARCH outputs
+price = float(predictor.close_prices["BTC-USD"].dropna().iloc[-1])
+sigma = float(predictor.garch_features["BTC-USD_GARCH_Vol"].dropna().iloc[-1])
+sim = CryptoMonteCarloSimulator(price, btc_mu, sigma, ticker="BTC-USD")
+sim.run_simulation(horizon_days=30, num_simulations=10_000)
+print(sim.calculate_risk_metrics().report())
 
 # Save / restore
 predictor.save_models("models_artifacts")

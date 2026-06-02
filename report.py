@@ -15,6 +15,7 @@ import pandas as pd
 
 from mlbase import DEFAULT_TICKERS
 from model import CryptoMLPredictor
+from risk_management import CryptoMonteCarloSimulator, SimulationResult, suggest_allocation
 
 
 def _format_metrics(metrics: pd.DataFrame) -> str:
@@ -122,6 +123,67 @@ def _walk_forward_table(wf_results: dict[str, dict[str, Any]]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _run_risk_layer(
+    predictor: CryptoMLPredictor,
+    horizon_days: int = 30,
+    num_simulations: int = 10_000,
+) -> None:
+    """Drive the Layer 3 Monte Carlo risk engine from live model outputs.
+
+    For each ticker the drift comes from the ML next-day forecast, the
+    diffusion from the latest annualised GARCH conditional volatility, and the
+    start price from the most recent close. Prints a VaR/CVaR report and a
+    Sharpe/Kelly allocation suggestion.
+    """
+    print("\n" + "=" * 72)
+    print(
+        f"Layer 3 Monte Carlo Risk Simulation "
+        f"({horizon_days}-day horizon, {num_simulations:,} sims)"
+    )
+    print("=" * 72)
+
+    results: dict[str, SimulationResult] = {}
+    for ticker in predictor.tickers:
+        try:
+            mu = predictor.predict_next_day_return(ticker)
+            price = float(predictor.close_prices[ticker].dropna().iloc[-1])
+            garch_column = f"{ticker}_GARCH_Vol"
+            sigma = float(
+                predictor.garch_features[garch_column].dropna().iloc[-1]
+            )
+        except (KeyError, IndexError, AttributeError) as exc:
+            warnings.warn(
+                f"Could not assemble risk inputs for {ticker} ({exc!r}); skipped.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            continue
+
+        simulator = CryptoMonteCarloSimulator(
+            current_price=price,
+            expected_return=mu,
+            volatility=sigma,
+            ticker=ticker,
+            random_state=42,
+        )
+        result = simulator.run_simulation(
+            horizon_days=horizon_days, num_simulations=num_simulations
+        )
+        results[ticker] = result
+        metrics = simulator.calculate_risk_metrics(result)
+        print(
+            f"\n{metrics.report()}\n"
+            f"  Inputs: daily mu={mu:+.5f}, annual sigma={sigma:.2%}"
+        )
+
+    if len(results) >= 2:
+        print("\nSuggested allocation from simulated outcomes:")
+        for method in ("sharpe", "kelly"):
+            allocation = suggest_allocation(results, method=method)  # type: ignore[arg-type]
+            split = ", ".join(f"{t}: {w:.1%}" for t, w in allocation.items())
+            print(f"  {method.capitalize():7s}: {split}")
+
+
 def main() -> None:
     """Run the full Layer 2 ML forecasting pipeline."""
     predictor = CryptoMLPredictor(
@@ -195,6 +257,8 @@ def main() -> None:
     for ticker in predictor.tickers:
         mu = predictor.predict_next_day_return(ticker)
         print(f"{ticker}: {mu:.6f}")
+
+    _run_risk_layer(predictor)
 
     try:
         predictor.save_models("models_artifacts")

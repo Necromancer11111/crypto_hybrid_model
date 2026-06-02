@@ -14,6 +14,10 @@ data_cache/
 # Trained model artefacts (large binary files)
 models_artifacts/
 
+# Generated plots (e.g. Monte Carlo simulation figures)
+montecarlo_*.png
+*.png
+
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
