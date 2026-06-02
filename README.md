@@ -1,71 +1,77 @@
-# Crypto Hybrid Model
+# Hybrydowy Model Krypto (Crypto Hybrid Model)
 
-A three-layer quantitative research framework for Bitcoin and Ethereum that
-combines statistical volatility modelling (GARCH) with machine learning to
-forecast next-day log returns and evaluate systematic Long/Flat trading
-strategies.
+Trójwarstwowy framework badawczy dla Bitcoin i Ethereum, który łączy statystyczne modelowanie zmienności (GARCH) z uczeniem maszynowym do prognozowania log-zwrotów na następny dzień, ewaluacji systematycznych strategii Long/Flat oraz symulacji ryzyka rynkowego metodą Monte Carlo.
 
 ---
 
-## Architecture
+## Architektura
 
-```
-Layer 0 — Data
+```text
+Warstwa 0 — Dane
   data/data.py          CryptoDataFetcher
-                        yfinance download → log-returns, rolling vol, volume
-                        on-disk cache (parquet / CSV fallback)
+                        Pobieranie danych (yfinance) → log-zwroty, roczna zmienność, wolumen
+                        Pamięć podręczna na dysku (parquet / CSV fallback)
 
-Layer 1 — Statistical
+Warstwa 1 — Statystyka
   statistical_analysis.py   CryptoVolatilityModel
-                            ADF stationarity test
-                            GARCH(1,1) conditional volatility (annualised)
+                            Test stacjonarności ADF
+                            Warunkowa zmienność GARCH(1,1) (annualizowana)
 
-Layer 2 — Machine Learning
-  mlbase.py             Shared constants and FoldMetric record
-  features.py           FeatureMixin  – leakage-free feature engineering
-  backtest.py           BacktestMixin – Long/Flat strategy evaluation
-  persistence.py        PersistenceMixin – save/load models (joblib)
-  model.py              CryptoMLPredictor – training, prediction, tuning
-  report.py             Console formatters + main() pipeline
+Warstwa 2 — Uczenie Maszynowe
+  mlbase.py             Wspólne stałe i struktura FoldMetric
+  features.py           FeatureMixin – inżynieria cech (bez wycieku danych)
+  backtest.py           BacktestMixin – ewaluacja strategii Long/Flat
+  persistence.py        PersistenceMixin – zapis/odczyt modeli (joblib)
+  model.py              CryptoMLPredictor – trenowanie, predykcja, strojenie hiperparametrów
+  report.py             Formatowanie konsolowe i przepływ main()
+  finance_metrics.py    Czyste funkcje ryzyka/zwrotu (Sharpe, Sortino,
+                        max drawdown, VaR, CVaR, kalibracja walk-forward)
+  ml_forecasting.py     Cienka fasada zachowująca oryginalny punkt wejścia
 
-  finance_metrics.py    Pure risk/return functions (Sharpe, Sortino,
-                        max drawdown, VaR, CVaR, walk-forward calibration)
-
-  ml_forecasting.py     Thin facade – keeps the original entry point and
-                        all existing imports working unchanged
-
-Layer 3 — Risk Management & Market Simulation
+Warstwa 3 — Zarządzanie Ryzykiem i Symulacja Rynku
   risk_management.py    CryptoMonteCarloSimulator
-                        Vectorised Geometric Brownian Motion (GBM) paths
-                        driven by ML drift (mu) and GARCH volatility (sigma)
-                        VaR / CVaR (95% & 99%), Sharpe/Kelly allocation, plots
+                        Zwektoryzowane ścieżki geometrycznego ruchu Browna (GBM)
+                        zasilane dryfem z ML (mu) oraz zmiennością z GARCH (sigma)
+                        VaR / CVaR (95% i 99%), alokacja Sharpe/Kelly, wykresy
 ```
 
 ---
 
-## Features
+## Symulacje Monte Carlo
 
-| Category | Details |
-|---|---|
-| **Data** | BTC-USD, ETH-USD daily OHLCV via yfinance; optional on-disk cache |
-| **Statistical** | ADF test, GARCH(1,1) with convergence retry, dynamic annualisation |
-| **Feature set** | Log-return lags (1/2/3/5/7d), SMA ratios, RSI-14, rolling vol (7/21d), GARCH vol, volume features, BTC cross-asset context |
-| **Model** | XGBRegressor (preferred) or RandomForestRegressor; TimeSeriesSplit |
-| **Tuning** | Optional RandomizedSearchCV with TimeSeriesSplit (leakage-free) |
-| **Backtest** | Long/Flat strategy with basis-point transaction costs |
-| **Threshold** | Grid-search (Sortino-optimal) + nested walk-forward calibration |
-| **Metrics** | MAE, R², directional accuracy, Sharpe, Sortino, max drawdown, VaR, CVaR, win rate, cumulative return |
-| **Verdict** | Rule-based classification: PELNA PRZEWAGA / DEFENSYWNA PRZEWAGA / BRAK PRZEWAGI |
-| **Persistence** | joblib model files + metadata.json sidecar |
-| **Simulation** | Vectorised GBM Monte Carlo (10k paths) fed by live ML drift + GARCH volatility |
-| **Tail risk** | 95% / 99% VaR and Expected Shortfall (CVaR) from the terminal distribution |
-| **Allocation** | Sharpe- or Kelly-based BTC/ETH split with risk-parity fallback |
+W oparciu o wyjścia z modelu ML (przewidywany zwrot) i modelu statystycznego (przewidywana zmienność), warstwa zarządzania ryzykiem symuluje 10 000 możliwych scenariuszy cenowych w wybranym horyzoncie czasowym (np. 30 dni). Poniższe wykresy przedstawiają wygenerowane ścieżki cenowe oraz rozkład ryzyka z zaznaczonym Value at Risk (VaR).
+
+### Bitcoin (BTC-USD)
+![Symulacja Monte Carlo BTC](montecarlo_BTC_USD.png)
+
+### Ethereum (ETH-USD)
+![Symulacja Monte Carlo ETH](montecarlo_ETH_USD.png)
 
 ---
 
-## Quick Start
+## Funkcjonalności
 
-### 1. Create and activate a virtual environment
+| Kategoria | Szczegóły |
+|---|---|
+| **Dane** | Codzienne dane OHLCV dla BTC-USD i ETH-USD z yfinance; opcjonalny szybki cache na dysku |
+| **Statystyka** | Test ADF, model GARCH(1,1) z mechanizmem ponawiania zbieżności, dynamiczna annualizacja |
+| **Cechy** | Opóźnienia log-zwrotów (lags 1-7d), stosunki średnich ruchomych SMA, RSI-14, historyczna zmienność krocząca, zmienność GARCH, wskaźniki wolumenu, kontekst międzyrynkowy BTC |
+| **Model** | XGBRegressor (preferowany) lub RandomForestRegressor; walidacja TimeSeriesSplit |
+| **Strojenie** | Opcjonalny RandomizedSearchCV z TimeSeriesSplit (chroniący przed wyciekiem danych) |
+| **Backtest** | Strategia Long/Flat uwzględniająca narzucone koszty transakcyjne (w punktach bazowych) |
+| **Progowanie** | Grid-search (optymalizacja pod Sortino) + bezpieczna zagnieżdżona kalibracja walk-forward |
+| **Metryki** | MAE, R², trafność kierunkowa, Sharpe, Sortino, max drawdown, VaR, CVaR, win rate, całkowity zysk |
+| **Werdykt** | Klasyfikacja oparta na regułach: PEŁNA PRZEWAGA / DEFENSYWNA PRZEWAGA / BRAK PRZEWAGI |
+| **Zapis** | Generowanie plików modeli joblib i pliku metadanych metadata.json |
+| **Symulacja** | Zwektoryzowane GBM Monte Carlo (np. 10k ścieżek) połączone bezpośrednio z parametrami z ML i GARCH |
+| **Ryzyko ogona** | Value at Risk (VaR) oraz Expected Shortfall (CVaR) na poziomach 95% i 99% z terminalnego rozkładu |
+| **Alokacja** | Podział portfela BTC/ETH na bazie kryterium Sharpe'a lub Kelly'ego |
+
+---
+
+## Szybki Start
+
+### 1. Utwórz i aktywuj środowisko wirtualne
 
 ```powershell
 python -m venv venv
@@ -73,50 +79,50 @@ python -m venv venv
 # source venv/bin/activate     # Linux / macOS
 ```
 
-### 2. Install dependencies
+### 2. Zainstaluj zależności
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-> **Windows note**: if `xgboost` fails to install, first install the
-> [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe).
+> **Uwaga dla Windows**: jeśli instalacja pakietu `xgboost` zakończy się błędem, zainstaluj darmowy dodatek [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe).
 
-### 3. Run the full pipeline
+### 3. Uruchom rurociąg (pipeline)
 
 ```powershell
-# From the project root (crypto_hybrid_model/)
+# Z głównego folderu projektu:
 python main.py
-# or equivalently
+# lub używając oryginalnego punktu wejścia:
 python ml_forecasting.py
 ```
 
-The first run downloads data from yfinance and writes a local cache to
-`data_cache/`. Subsequent runs load from cache and start immediately.
+Podczas pierwszego uruchomienia dane zostaną pobrane z Yahoo Finance i zapisane w folderze `data_cache/`. Każde kolejne uruchomienie wczyta je w ułamek sekundy z dysku. 
+
+Aby uruchomić wyłącznie analizę ryzyka (warstwa 3) z opcją generowania wykresów:
+```powershell
+python risk_management.py
+```
 
 ---
 
-## Output
+## Raport i Wyjście (Output)
 
-Running `main.py` produces a console report with eight sections:
+Standardowe uruchomienie `main.py` generuje w konsoli 8 sekcji:
 
-1. **Layer 2 ML Forecasting Metrics** — MAE and R² per fold and on average
-2. **Feature Importances** — ranked feature contributions per ticker
-3. **Financial Metrics** — Long/Flat strategy vs buy-and-hold (fixed threshold)
-4. **Investment Verdict** — rule-based assessment with caveats
-5. **Calibrated Threshold** — Sortino-optimal threshold (optimistic upper bound)
-6. **Walk-Forward Validation** — leakage-free strategy vs benchmark per window
-7. **Next-Day Forecasts** — expected log return per ticker
-8. **Monte Carlo Risk Simulation** — VaR/CVaR and Sharpe/Kelly allocation (Layer 3)
-
-`risk_management.py` can also be run standalone (`python risk_management.py`)
-with mocked inputs, which additionally saves price-path / distribution plots.
+1. **Layer 2 ML Forecasting Metrics** — metryki MAE i R² (dla każdego foldu i uśrednione)
+2. **Feature Importances** — waga i wpływ cech na decyzyjność modelu XGBoost
+3. **Financial Metrics** — Long/Flat w porównaniu z klasycznym Buy & Hold (przy stałym progu wejścia)
+4. **Investment Verdict** — werdykt oparty na metrykach z dołączonymi zastrzeżeniami
+5. **Calibrated Threshold** — rzut okiem na zoptymalizowany próg (dane in-sample; granica optymistyczna)
+6. **Walk-Forward Validation** — bezwzględna walidacja bez wycieku danych z przyszłości
+7. **Next-Day Forecasts** — prognozowany log-zwrot na następną sesję giełdową
+8. **Monte Carlo Risk Simulation** — VaR/CVaR oraz sugestie alokacji (uruchomienie Warstwy 3 na najnowszych danych)
 
 ---
 
-## Module Reference
+## Odniesienia do modułów
 
-| Module | Public API |
+| Moduł | Główne API |
 |---|---|
 | `data/data.py` | `CryptoDataFetcher(tickers, start, end, interval, cache_dir)` |
 | `statistical_analysis.py` | `CryptoVolatilityModel(returns, trading_days)` |
@@ -124,6 +130,7 @@ with mocked inputs, which additionally saves price-path / distribution plots.
 | `finance_metrics.py` | `summarize`, `sharpe_ratio`, `sortino_ratio`, `max_drawdown`, `walk_forward_threshold`, … |
 | `risk_management.py` | `CryptoMonteCarloSimulator(current_price, expected_return, volatility)`, `suggest_allocation` |
 
+**Przykład użycia z poziomu kodu:**
 ```python
 from model import CryptoMLPredictor
 from risk_management import CryptoMonteCarloSimulator
@@ -131,52 +138,50 @@ from risk_management import CryptoMonteCarloSimulator
 predictor = CryptoMLPredictor(cache_dir="data_cache")
 predictor.train_all()
 
-# Next-day forecast
+# Prognoza zwrotu na następny dzień rynkowy
 btc_mu = predictor.predict_next_day_return("BTC-USD")
 
-# Walk-forward validated backtest
+# Walidacja i uczciwy backtest
 result = predictor.walk_forward_threshold("BTC-USD")
 print(result["verdict"])
 
-# Layer 3: Monte Carlo risk simulation fed by live ML + GARCH outputs
+# Warstwa 3: Symulacja ryzyka napędzana danymi z ML oraz GARCH
 price = float(predictor.close_prices["BTC-USD"].dropna().iloc[-1])
 sigma = float(predictor.garch_features["BTC-USD_GARCH_Vol"].dropna().iloc[-1])
 sim = CryptoMonteCarloSimulator(price, btc_mu, sigma, ticker="BTC-USD")
+
 sim.run_simulation(horizon_days=30, num_simulations=10_000)
 print(sim.calculate_risk_metrics().report())
 
-# Save / restore
+# Persystencja (zapisanie wytrenowanych modeli na dysk)
 predictor.save_models("models_artifacts")
 ```
 
 ---
 
-## Interpretation Guide
+## Przewodnik Interpretacji Wyników
 
-| Metric | What it means |
+| Metryka / Pojęcie | Co to oznacza |
 |---|---|
-| R² < 0 | Model is worse than predicting the mean — expected for daily crypto returns |
-| Dir. accuracy ~49 % | No directional edge; the model learns risk avoidance, not direction |
-| Lower volatility, shallower drawdown | Primary benefit of the strategy vs buy-and-hold |
-| PELNA PRZEWAGA | Strategy beats benchmark on return AND risk-adjusted metrics |
-| DEFENSYWNA PRZEWAGA | Better risk metrics, lower total return — safer but less profitable |
-| BRAK PRZEWAGI | No improvement over buy-and-hold |
+| **R² < 0** | Model radzi sobie słabiej niż przewidywanie średniej. Jest to **oczekiwane i normalne** w predykcji dziennych cen wirtualnych aktywów. Stosunek sygnału do szumu jest krytycznie niski. |
+| **Trafność kierunkowa ~49%** | Rzut monetą. Model nie uczy się przepowiadania samego kierunku (co jest bliskie niemożliwości). Model znajduje przewagę ucząc się tego *kiedy rynek będzie mocno zmienny*. |
+| **Mniejsza zmienność, mniejszy drawdown** | System siedząc znaczny czas w gotówce obniża ryzyko i straty. To jest faktyczna główna zaleta działania tego algorytmu. |
+| **PEŁNA PRZEWAGA** | Strategia algorytmiczna pokonuje benchmark ("Kup i trzymaj") na wykresie zwrotu, jak i w metrykach skorygowanych o ryzyko. |
+| **DEFENSYWNA PRZEWAGA** | Algorytm dostarcza mniejszych obsunięć kapitału i ma lepsze wskaźniki Sharpe/Sortino, lecz wygenerował mniejszy zysk całkowity. "Bezpieczniej, ale mniej zyskownie". |
+| **BRAK PRZEWAGI** | Wyniki są we wszystkich parametrach gorsze od standardowego trzymania krypto. |
 
-> The walk-forward verdict is the most trustworthy result: neither the model
-> nor the threshold ever sees the evaluation data.
-
----
-
-## Requirements
-
-- Python 3.10+
-- See `requirements.txt` for package versions
-- Internet connection for the first run (yfinance download); offline thereafter
+> Zawsze polegaj przede wszystkim na wynikach z bloku **Walk-Forward Validation**. Moduły wchodzące w jego skład oceniają skuteczność, udostępniając do treningu i kalibracji progu wyłącznie historyczne punkty (symulując idealnie zachowanie "na żywo").
 
 ---
 
-## Disclaimer
+## Wymagania
 
-This project is for research and educational purposes only.
-It does not constitute financial advice.
-Past performance of backtested strategies does not guarantee future results.
+- Python w wersji 3.10+
+- Biblioteki wymienione w `requirements.txt`
+- Połączenie internetowe na potrzeby pierwszego pobrania paczki danych (następnie narzędzie działa również w wariancie offline, o ile pamięć podręczna została zbudowana).
+
+---
+
+## Zastrzeżenie prawne (Disclaimer)
+
+Zbudowany algorytm, rurociąg badawczy oraz wszystkie dostarczane przez niego wyniki mają charakter wyłącznie badawczy, statystyczny i edukacyjny. W żadnym wypadku projekt nie stanowi on doradztwa inwestycyjnego, finansowego ani zachęty do obrotu prawdziwymi środkami. Algorytm demonstruje koncepcje Data Science. Należy pamiętać, że wyniki osiągnięte w symulacjach i backtestach nie dają cienia gwarancji podobnego działania w historycznej i nienotowanej jeszcze przyszłości.
