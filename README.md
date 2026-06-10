@@ -77,7 +77,7 @@ Wartość ta zasila model uczenia maszynowego jako kluczowa cecha opisująca bie
 
 ---
 
-##  Warstwa 2: Uczenie Maszynowe (Głębokie Wyjaśnienie XGBoost)
+##  Warstwa 2: Uczenie Maszynowe 
 
 Warstwa uczenia maszynowego odpowiada za syntezę wszystkich danych rynkowych i próbę prognozy siły ruchu ceny na kolejny dzień.
 
