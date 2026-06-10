@@ -231,15 +231,7 @@ Uruchomienie potoku wygeneruje rozbudowany raport tekstowy. Oto jak należy go i
 
 ---
 
-##  Skrypt Prezentacyjny (Wskazówki na wystąpienie)
 
-Jeśli prezentujesz ten projekt przed zespołem technologicznym lub wykładowcą, oprzyj strukturę o poniższe punkty:
-
-1. **Problem i Hipoteza:** Dzienne zwroty kryptowalut są bliskie białemu szumowi (nieprzewidywalne kierunkowo), ale ich zmienność wykazuje klastrowanie (ryzyko da się modelować).
-2. **Rygor Metodologiczny:** Zapobiegliśmy wyciekowi danych poprzez zaimplementowanie TimeSeriesSplit oraz zagnieżdżoną kalibrację progów wyłącznie in-sample.
-3. **Wnioski z wag cech:** Model XGBoost najwyższe znaczenie przypisuje wskaźnikom zmienności (GARCH oraz Rolling Volatility), co dowodzi, że algorytm prawidłowo nauczył się reagować na reżimy ryzyka zamiast na surowe poziomy cenowe.
-
----
 
 ## ⚠️ Zastrzeżenie prawne (Disclaimer)
 
