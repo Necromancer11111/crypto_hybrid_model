@@ -12,7 +12,7 @@ Ten model nie próbuje rozpaczliwie odgadnąć przyszłej ceny. Jego zadaniem je
 
 ---
 
-## 🗺️ Architektura Systemu i Przepływ Danych
+##  Architektura Systemu i Przepływ Danych
 
 System został zaprojektowany w sposób całkowicie modułowy, izolując od siebie pobieranie danych, matematykę statystyczną, algorytmy sztucznej inteligencji oraz symulację przyszłości.
 
@@ -35,7 +35,7 @@ Zwektoryzowany Ruch Browna (Monte Carlo) -> Kalkulacja VaR/CVaR -> Kryterium Kel
 
 ---
 
-## 📈 Warstwa 1: Statystyka i Podwaliny Ekonometryczne
+##  Warstwa 1: Statystyka i Podwaliny Ekonometryczne
 
 Zanim dane trafią do algorytmów sztucznej inteligencji, poddawane są rygorystycznej obróbce statystycznej. Pozwala to na dostarczenie modelowi ML cech o najwyższej wartości informacyjnej.
 
@@ -77,7 +77,7 @@ Wartość ta zasila model uczenia maszynowego jako kluczowa cecha opisująca bie
 
 ---
 
-## 🤖 Warstwa 2: Uczenie Maszynowe (Głębokie Wyjaśnienie XGBoost)
+##  Warstwa 2: Uczenie Maszynowe (Głębokie Wyjaśnienie XGBoost)
 
 Warstwa uczenia maszynowego odpowiada za syntezę wszystkich danych rynkowych i próbę prognozy siły ruchu ceny na kolejny dzień.
 
@@ -101,7 +101,7 @@ Algorytmy drzewiaste nie potrafią ekstrapolować danych poza zakres, który wid
 
 XGBoost (Extreme Gradient Boosting) to jeden z najpotężniejszych algorytmów uczenia maszynowego dla danych tabelarycznych. Należy on do rodziny metod zespołowych (Ensemble Learning) i opiera się na koncepcji wzmacniania gradientowego (Gradient Boosting).
 
-#### 🧠 Intuicja obrazowa: Sztafeta Ekspertów
+####  Intuicja obrazowa: Sztafeta Ekspertów
 
 Wyobraź sobie, że grupa ekspertów próbuje wspólnie rozwiązać trudne zadanie matematyczne:
 
@@ -124,7 +124,7 @@ Każde kolejne drzewo jest celowo trenowane na porażkach swoich poprzedników. 
 [Ostateczny Wynik] <── Suma ważona wszystkich korekt punktowych
 ```
 
-### 🛠️ Dlaczego XGBoost, a nie sieci neuronowe (np. LSTM)?
+###  Dlaczego XGBoost, a nie sieci neuronowe (np. LSTM)?
 
 - **Odporność na przeuczenie (Regularization):** XGBoost posiada wbudowaną penalizację za tworzenie zbyt skomplikowanych drzew (parametry L1 i L2). Zapobiega to dopasowywaniu się modelu do czystego szumu rynkowego.
 - **Geometria podziału przestrzeni:** Drzewa decyzyjne świetnie radzą sobie z nieliniowymi zależnościami interakcji cech (np. „jeśli RSI > 70 ORAZ zmienność GARCH jest ekstremalnie wysoka, to wyjdź z rynku”).
@@ -150,7 +150,7 @@ Model ML generuje surową prognozę zwrotu. Moduł `backtest.py` szuka optymalne
 
 ---
 
-## 🎲 Warstwa 3: Zarządzanie Ryzykiem i Symulacje Monte Carlo
+##  Warstwa 3: Zarządzanie Ryzykiem i Symulacje Monte Carlo
 
 Ostatnia warstwa odpowiada za propagację niepewności w przód. Wykorzystując prognozy z poprzednich kroków, silnik uruchamia 10 000 niezależnych symulacji rozwoju ceny na najbliższe 30 dni.
 
@@ -177,7 +177,7 @@ Z końcowego rozkładu symulowanych cen wyliczane są kluczowe wskaźniki dla za
 
 ---
 
-## 🖼️ Wykresy i Symulacje
+##  Wykresy i Symulacje
 
 W oparciu o parametry wejściowe, model generuje trajektorie cenowe oraz histogramy rozkładu ryzyka końcowego.
 
@@ -191,7 +191,7 @@ W oparciu o parametry wejściowe, model generuje trajektorie cenowe oraz histogr
 
 ---
 
-## 🛠️ Szybki Start
+##  Szybki Start
 
 ### 1. Przygotowanie środowiska i instalacja
 
@@ -216,7 +216,7 @@ python main.py --show-plots
 
 ---
 
-## 📊 Interpretacja Wyników (Poradnik akademicki)
+##  Interpretacja Wyników 
 
 Uruchomienie potoku wygeneruje rozbudowany raport tekstowy. Oto jak należy go interpretować:
 
@@ -231,7 +231,7 @@ Uruchomienie potoku wygeneruje rozbudowany raport tekstowy. Oto jak należy go i
 
 ---
 
-## 📢 Skrypt Prezentacyjny (Wskazówki na wystąpienie)
+##  Skrypt Prezentacyjny (Wskazówki na wystąpienie)
 
 Jeśli prezentujesz ten projekt przed zespołem technologicznym lub wykładowcą, oprzyj strukturę o poniższe punkty:
 
