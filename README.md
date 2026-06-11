@@ -216,15 +216,64 @@ python main.py --show-plots
 
 ---
 
-##  Interpretacja Wyników 
+##  Jak czytać wyniki z terminala? 
 
-Uruchomienie potoku wygeneruje rozbudowany raport tekstowy. Oto jak należy go interpretować:
+Po uruchomieniu skryptu `python main.py` system generuje raport podzielony na sekcje. Rynek finansowy to w dużej mierze szum, dlatego nasz model nie stara się być nieomylnym jasnowidzem – jego głównym zadaniem jest roztropne zarządzanie ryzykiem.
 
-- **R² < 0:** W finansach ilościowych na danych dziennych ujemne \(R^2\) jest rzeczą normalną. Oznacza to, że stosunek sygnału do szumu jest krytycznie niski, a model radzi sobie słabiej niż przewidywanie prostej średniej.
-- **Trafność kierunkowa ~49%:** Rynek jest bliski błądzenia losowego. Algorytm zarabia nie na trafnym odgadywaniu każdego ruchu, ale na unikaniu dużych obsunięć kapitału (drawdown) poprzez ucieczkę w gotówkę w reżimach wysokiego ryzyka.
+Oto jak bez bólów głowy zinterpretować to, co wyświetla konsola:
 
-### Klasyfikacja Werdyktów Inwestycyjnych
+---
 
+### 1. Metryki Sztucznej Inteligencji (Layer 2 ML Forecasting Metrics)
+
+W tej sekcji algorytm XGBoost podsumowuje swoje próby przewidywania jutra na 5 różnych odcinkach czasu (tzw. foldach chronologicznych).
+
+* **Ujemne $R^2$ (np. -0.27):** > **Co to oznacza dla człowieka:** Model częściowo gubi się w rynkowym szumie i popełnia błędy. 
+    W świecie finansów na danych dziennych to **całkowicie normalne**. Gdyby model na niezależnych danych miał $R^2$ na poziomie +80%, oznaczałoby to, że w kodzie jest błąd (wyciek danych z przyszłości). Nasz ujemny wynik to dowód na to, że test jest rygorystyczny i uczciwy.
+* **Trafność kierunkowa (`dir_acc` ~ 49-51%):** > **Co to oznacza dla człowieka:** Algorytm zgaduje kierunek ruchu ceny (góra/dół) z dokładnością zbliżoną do rzutu monetą. 
+    Potwierdza to rynkową zasadę: nikt nie wie, co stanie się jutro. Nasza strategia nie wygrywa dlatego, że idealnie zgaduje przyszłość, ale dlatego, że potrafi w odpowiednim momencie **uciec z giełdy**.
+* **Ważność cech (Feature Importances):**
+    Pokazuje, co dla bota jest najważniejsze. Zobaczysz tam, że najwyższe noty zbiera zmienność (`rolling_vol`, `garch_vol`). Oznacza to, że algorytm opiera swoje decyzje na **poziomie strachu i ryzyka na rynku**, a nie na ślepym podążaniu za ceną.
+
+---
+
+### 2. Wyniki Strategii Inwestycyjnej (Walk-Forward Validated Strategy)
+
+To najważniejsza tabela w całym projekcie. Porównuje ona dwa podejścia:
+1.  **Benchmark (Buy & Hold):** Czyli tradycyjne, pasywne kupienie kryptowaluty i trzymanie jej bez względu na wszystko.
+2.  **Strategy:** Nasz inteligentny bot, który na podstawie wskazań ML decyduje: inwestujemy (**Long**) czy czekamy w bezpiecznej gotówce (**Flat**).
+
+#### Kluczowe pojęcia w tabeli:
+* **Sharpe / Sortino Ratio:** Im wyższe, tym lepszy stosunek zysku do strachu. Wskaźnik *Sortino* jest kluczowy, bo ocenia model wyłącznie za straty (nie karze go za to, że cena nagle wystrzeliła w górę).
+* **Max Drawdown (Maksymalne obsunięcie):** Najważniejsza miara ryzyka. Pokazuje, jak głęboko spadłby Twój kapitał w najgorszym momencie kryzysu.
+
+---
+
+### 3. Trzy Werdykty Inwestycyjne (Jak system ocenia samego siebie)
+
+Po przeanalizowaniu danych system automatycznie wystawia jedną z trzech ocen:
+
+####  PEŁNA PRZEWAGA
+* **W skrócie:** Bot idealny. Zarobił więcej niż zwykłe trzymanie krypto, a do tego zrobił to przy mniejszym ryzyku i mniejszych spadkach.
+
+####  DEFENSYWNA PRZEWAGA (Przykład Bitcoina w Twoim teście)
+* **W skrócie:** Bot jako tarcza ochronna.
+* **Jak to czytać:** Zwykłe trzymanie Bitcoina dało np. +58% zysku, ale w trakcie roku Twój kapitał topniał w kryzysie aż o **-66%** (`max_drawdown`). Nasz bot zarobił skromne +2%, ale jego największy spadek wyniósł zaledwie **-22%**. 
+* **Werdykt:** Algorytm uznał rynek za zbyt niebezpieczny i przez większość czasu kazał Ci siedzieć na bezpiecznej gotówce. Uciąłeś zysk, ale uratowałeś nerwy i 44% swojego kapitału przed potężnym krachem.
+
+####  BRAK PRZEWAGI (Przykład Ethereum w Twoim teście)
+* **W skrócie:** Rynek okazał się sprytniejszy od bota.
+* **Jak to czytać:** Bot zanotował gorszy wynik lub głębszy spadek niż zwykłe trzymanie kryptowaluty. 
+* **Werdykt:** W przypadku Ethereum rynek mocno szarpał w górę i w dół (konsolidacja). Bot za często kupował na górce i sprzedawał w dołku, a koszty transakcyjne (prowizje giełdowe ustawione rygorystycznie na 10 punktów bazowych) dodatkowo pogłębiły stratę. To dowód na to, że model nie jest sztucznie podkręcony pod ładne wyniki.
+
+---
+
+###  4. Prognoza Ryzyka (Layer 3 Monte Carlo Analytics)
+
+Na samym dole raportu silnik probabilistyczny łączy prognozę kierunku z AI oraz poziom strachu z modelu GARCH, po czym symuluje **10 000 możliwych scenariuszy na kolejne 30 dni**.
+
+* **Value at Risk (VaR 95%):** Jeśli wynosi np. `-3.37%`, daje inwestorowi jasny komunikat: *Based on current math, there is only a 5% chance that tomorrow we will lose more than 3.37% of our money.*
+* **Expected Shortfall (CVaR 95%):** Odpowiada na pytanie: *Gdyby jednak wydarzył się ten najgorszy scenariusz (czarna łabędź), to jak głęboka będzie średnia strata w tej strefie katastrofy?*
 - **PEŁNA PRZEWAGA:** Strategia handlowa pokonuje benchmark pasywny (Buy & Hold) zarówno pod kątem zwrotu, jak i metryk skorygowanych o ryzyko.
 - **DEFENSYWNA PRZEWAGA:** Algorytm dostarcza mniejszych obsunięć kapitału (Max Drawdown) i ma lepsze wskaźniki Sharpe/Sortino, lecz wygenerował mniejszy całkowity zysk (profil: bezpieczniej, ale mniej zyskownie).
 - **BRAK PRZEWAGI:** Wyniki strategii są gorsze od standardowego trzymania kryptowaluty.
