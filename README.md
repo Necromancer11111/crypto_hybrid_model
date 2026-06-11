@@ -229,10 +229,3 @@ Uruchomienie potoku wygeneruje rozbudowany raport tekstowy. Oto jak należy go i
 - **DEFENSYWNA PRZEWAGA:** Algorytm dostarcza mniejszych obsunięć kapitału (Max Drawdown) i ma lepsze wskaźniki Sharpe/Sortino, lecz wygenerował mniejszy całkowity zysk (profil: bezpieczniej, ale mniej zyskownie).
 - **BRAK PRZEWAGI:** Wyniki strategii są gorsze od standardowego trzymania kryptowaluty.
 
----
-
-
-
-## ⚠️ Zastrzeżenie prawne (Disclaimer)
-
-Zbudowany algorytm oraz dostarczane przez niego wyniki mają charakter wyłącznie badawczy, statystyczny i edukacyjny. W żadnym wypadku projekt nie stanowi doradztwa inwestycyjnego ani zachęty do obrotu prawdziwymi środkami finansowymi.
